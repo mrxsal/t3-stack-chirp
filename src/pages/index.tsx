@@ -1,13 +1,14 @@
 import { type NextPage } from "next";
 import Head from "next/head";
+import Image from "next/image";
 
-import SignInButton from "~/components/SignInButton";
 import { useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
 import { RouterOutputs, api } from "~/utils/api";
-import Image from "next/image";
+import { LoadingPage } from "~/components/Loading";
+import SignInButton from "~/components/SignInButton";
 
 dayjs.extend(relativeTime);
 
@@ -58,13 +59,24 @@ const PostView = (props: PostWithUser) => {
   );
 };
 
-const Home: NextPage = () => {
-  const user = useUser();
-  const { data, isLoading } = api.posts.getAll.useQuery();
+const Feed = () => {
+  const { data, isLoading: postsIsLoading } = api.posts.getAll.useQuery();
 
-  if (isLoading) return <div>Loading</div>;
+  if (postsIsLoading) return <LoadingPage size={50} />;
 
   if (!data) return <div>Something went wrong..</div>;
+
+  return (
+    <div className="flex flex-col">
+      {data?.map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
+      ))}
+    </div>
+  );
+};
+
+const Home: NextPage = () => {
+  const { user, isLoaded: userIsLoaded, isSignedIn } = useUser();
 
   return (
     <>
@@ -76,7 +88,7 @@ const Home: NextPage = () => {
       <main className="flex h-screen justify-center">
         <div className="w-full border-x border-slate-400 md:max-w-2xl">
           <div className="flex justify-center border-b border-slate-400 p-4">
-            {!user.isSignedIn ? (
+            {!isSignedIn ? (
               <div className="flex justify-center">
                 <SignInButton />
               </div>
@@ -84,12 +96,7 @@ const Home: NextPage = () => {
               <CreatePostWizard />
             )}
           </div>
-
-          <div className="flex flex-col">
-            {data?.map((fullPost) => (
-              <PostView {...fullPost} key={fullPost.post.id} />
-            ))}
-          </div>
+          {userIsLoaded && <Feed />}
         </div>
       </main>
     </>
